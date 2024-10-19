@@ -1,0 +1,21 @@
+apiVersion: "nuclio.io/v1"
+kind: NuclioFunction
+metadata:
+  name: my-function
+  namespace: nuclio
+spec:
+  env:
+  - name: MY_ENV_VALUE
+    value: my value
+  handler: my_function_with_config:my_entry_point
+  runtime: python
+  triggers:
+    http:
+      kind: http
+      attributes:
+        serviceType: NodePort
+    periodic:
+      attributes:
+        interval: 3s
+      class: ""
+      kind: cron
