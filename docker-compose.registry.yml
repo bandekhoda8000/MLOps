@@ -1,0 +1,43 @@
+version: '3.3'
+
+services:
+  filebrowserr:
+    container_name: filebrowserrr
+    image: registry:2
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.filebrowserr.rule=Host(`${HOST:-localhost}`)"
+      - "traefik.http.routers.filebrowserr.entrypoints=web"
+      - "traefik.http.routers.filebrowserr.entrypoints=websecure"
+      - "traefik.http.routers.filebrowserr.tls.certresolver=local-cert"
+      - "traefik.http.services.filebrowserr.loadbalancer.server.port=5000"
+    networks:
+      - traefik-net
+
+  traefikk:
+    image: traefik:v2.9
+    container_name: traefikk
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.network=traefik-net" 
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entryPoints.websecure.address=:443"
+      - "--certificatesResolvers.local-cert.acme.tlsChallenge=true"
+      - "--certificatesResolvers.local-cert.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesResolvers.local-cert.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory"
+      - "--api.insecure=true"  # Enables Traefik dashboard without authentication
+      - "--entryPoints.dashboard.address=:8081"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8081:8081"
+    volumes:
+      - ./letsencrypt:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - traefik-net
+
+networks:
+  traefik-net:
