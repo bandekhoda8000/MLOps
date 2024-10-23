@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-local-image
+  namespace: kubeflow  # Ensure you are using the correct namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-local-image
+  template:
+    metadata:
+      labels:
+        app: test-local-image
+    spec:
+      hostNetwork: true  # Use the host's network
+      containers:
+        - name: test-container
+          image: pynuclio_base_3.8 # Localhost should work since we're in hostNetwork
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "echo Host IP: $(hostname -i); sleep 3600"]  # Keeps the pod running for testing

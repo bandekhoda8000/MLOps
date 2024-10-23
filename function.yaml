@@ -3,6 +3,7 @@ kind: NuclioFunction
 metadata:
   name: my-function
   namespace: nuclio
+  project: my-project
 spec:
   env:
   - name: MY_ENV_VALUE

@@ -1,0 +1,34 @@
+# Base the image on Python 3.8 Alpine
+FROM python:3.8-alpine
+
+# Install necessary packages for Nuclio
+RUN apk add --no-cache \
+        bash \
+        build-base \
+        libffi-dev \
+        openssl-dev \
+        py3-pip \
+        curl \
+        libstdc++ \
+        linux-headers \
+        musl-dev \
+        gcc \
+        libexecinfo-dev
+
+# Install the Nuclio Python SDK
+RUN pip install nuclio-sdk
+
+# Install any other Python dependencies for your function
+# Example: RUN pip install numpy pandas
+
+# Set the working directory
+WORKDIR /function
+
+# Copy your function code into the image
+COPY . .
+
+# Set the handler for Nuclio to find the function entry point
+ENV NUCLIO_HANDLER my_function_with_config:my_entry_point
+
+# Command to run the function using Nuclio's handler
+CMD ["python", "-m", "nuclio"]
