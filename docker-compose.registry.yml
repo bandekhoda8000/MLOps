@@ -1,22 +1,28 @@
 version: '3.3'
 
 services:
-  filebrowserr:
-    container_name: filebrowserrr
+  registry:
+    container_name: registry
     image: registry:2
+    # environment:
+    #   - REGISTRY_AUTH=htpasswd
+    #   - REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm
+    #   - REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd
+    volumes:
+      - ./auth:/auth
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.filebrowserr.rule=Host(`${HOST:-localhost}`)"
-      - "traefik.http.routers.filebrowserr.entrypoints=web"
-      - "traefik.http.routers.filebrowserr.entrypoints=websecure"
-      - "traefik.http.routers.filebrowserr.tls.certresolver=local-cert"
-      - "traefik.http.services.filebrowserr.loadbalancer.server.port=5000"
+      - "traefik.http.routers.registry.rule=Host(`${HOST:-localhost}`)"
+      - "traefik.http.routers.registry.entrypoints=web"
+      - "traefik.http.routers.registry.entrypoints=websecure"
+      - "traefik.http.routers.registry.tls.certresolver=local-cert"
+      - "traefik.http.services.registry.loadbalancer.server.port=5000"
     networks:
       - traefik-net
 
-  traefikk:
+  traefik:
     image: traefik:v2.9
-    container_name: traefikk
+    container_name: traefik
     command:
       - "--providers.docker=true"
       - "--providers.docker.network=traefik-net" 
