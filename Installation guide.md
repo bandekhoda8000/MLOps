@@ -5,8 +5,6 @@
 •  A user account with sudo privileges
 •  Internet connection(you may need to use a VPN)
 
-
-
 ## Step 1: Update Your System
 First, update your system to ensure all packages are up to date:
 ```sh
@@ -54,7 +52,10 @@ You can set the `docker` command of the current terminal window to the daemon th
 `
 eval $(minikube docker-env)
 `
-
+Revert to host's docker
+`
+eval $(minikube docker-env -u)
+`
 
 Add this to environment varialbes(in ~/.bashrc)
 ```sh
@@ -107,7 +108,7 @@ kubectl get namespaces
 ```
 - Setting the current default namespace
 ```sh
-kubectl config set-context --current --namespace=<namespace>
+kubectl config set-contex   t --current --namespace=<namespace>
 ```
 - Working with Pods
 ```sh
@@ -273,6 +274,26 @@ chmod +x ./kind
 sudo mv ./kind /usr/local/bin/kind
 ```
 
-## Install kubeflow ml-pipeline
+## Install kubeflow ml-pipeline with dashboard
+First run:
+```sh
+sudo sysctl fs.inotify.max_user_instances=2280
+sudo sysctl fs.inotify.max_user_watches=1255360
+```
 https://blog.min.io/setting-up-a-development-machine-with-kubeflow-pipelines-2-0-and-minio/
-Start the dashboard `kubectl port-forward svc/ml-pipeline-ui -n kubeflow 8080:80`
+
+```
+export PIPELINE_VERSION=2.0.0
+
+kubectl apply -k "github.com/kubeflow/pipelines/manifests/kustomize/cluster-scoped-resources?ref=$PIPELINE_VERSION"
+
+kubectl wait --for condition=established --timeout=60s crd/applications.app.k8s.io
+## its outpush must be `customresourcedefinition.apiextensions.k8s.io/applications.app.k8s.io condition met`
+
+kubectl apply -k "github.com/kubeflow/pipelines/manifests/kustomize/env/platform-agnostic?ref=$PIPELINE_VERSION"
+
+```
+Start the dashboard 
+`
+kubectl port-forward svc/ml-pipeline-ui -n kubeflow 8080:80
+`
