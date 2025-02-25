@@ -14,7 +14,6 @@ iptables -I INPUT -p tcp --dport 10250 -j ACCEPT
 iptables -I INPUT -p udp --dport 51820 -j ACCEPT
 iptables -I INPUT -p udp --dport 51821 -j ACCEPT
 iptables -I INPUT -p tcp --dport 5001 -j ACCEPT
-iptables -I INPUT -p tcp --dport 6443 -j ACCEPT
 sudo netfilter-persistent save
 
 ```
@@ -161,3 +160,19 @@ spec:
 ```
 Then restart the traefik pod
 You can see the pods in the file and/or stdout or the pod
+
+## HA
+You can have multiple server nodes deployed
+## Backups
+https://velero.io/
+Always take the cluster token and backup the cluster state database(etcd, sqlite)
+```sh
+sudo cp /var/lib/rancher/k3s/server/token /path/to/backup/
+sudo cp -r /etc/rancher/k3s /path/to/backup/
+sudo cp -r /var/lib/rancher/k3s /path/to/backup/
+
+## Debugging notes
+
+‍‍‍‍‍```
+sudo k3s start --debug 
+```
