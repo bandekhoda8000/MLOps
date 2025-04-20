@@ -1,0 +1,130 @@
+---
+- name: Install K3s Master Node with Pre-Installation Setup
+  hosts: master
+  become: yes
+  vars:
+    k3s_version: "v1.27.4+k3s1"  # Specify the desired K3s version (optional)
+    k3s_install_script_url: "https://get.k3s.io"
+    k3s_server_flags:
+      - "--cluster-init"  # Make kubeconfig readable by non-root users
+      - "--write-kubeconfig-mode=644"  # Make kubeconfig readable by non-root users
+      # - "--disable=traefik"  # Disable Traefik ingress controller (optional)
+
+  tasks:
+    - name: Ensure iptables-persistent is installed
+      apt:
+        name: iptables-persistent
+        state: present
+        update_cache: yes
+
+    - name: Enable netfilter-persistent service
+      systemd:
+        name: netfilter-persistent
+        enabled: yes
+        state: started
+
+    - name: Add iptables rules for K3s
+      shell: |
+        iptables -I INPUT -p tcp --dport 2379:2380 -j ACCEPT
+        iptables -I INPUT -p tcp --dport 6443 -j ACCEPT
+        iptables -I INPUT -p udp --dport 8472 -j ACCEPT
+        iptables -I INPUT -p tcp --dport 10250 -j ACCEPT
+        iptables -I INPUT -p udp --dport 51820 -j ACCEPT
+        iptables -I INPUT -p udp --dport 51821 -j ACCEPT
+        iptables -I INPUT -p tcp --dport 5001 -j ACCEPT
+      args:
+        executable: /bin/bash
+
+    - name: Save iptables rules persistently
+      shell: netfilter-persistent save
+
+    - name: Ensure curl is installed
+      apt:
+        name: curl
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Download and install K3s
+      shell: |
+        curl -sfL {{ k3s_install_script_url }} | INSTALL_K3S_VERSION={{ k3s_version }} sh -s - server {{ ' '.join(k3s_server_flags) }}
+      args:
+        creates: /usr/local/bin/k3s
+
+    - name: Ensure K3s service is running
+      systemd:
+        name: k3s
+        state: started
+        enabled: yes
+
+    - name: Fetch K3s kubeconfig file
+      fetch:
+        src: /etc/rancher/k3s/k3s.yaml
+        dest: ./k3s.yaml
+        flat: yes
+
+    - name: Update kubeconfig file with the correct server IP
+      replace:
+        path: ./k3s.yaml
+        regexp: '127.0.0.1'
+        replace: "{{ ansible_host }}"
+      delegate_to: localhost
+
+    - name: Display kubeconfig location
+      debug:
+        msg: "K3s kubeconfig file has been saved to ./k3s.yaml on the Ansible control machine."
+
+
+    - name: Install kubectl on the Ansible control machine
+      block:
+        - name: Check if kubectl is already installed
+          command: kubectl version --client
+          register: kubectl_check
+          ignore_errors: yes
+
+        - name: Install kubectl if not already installed
+          when: kubectl_check.rc != 0
+          block:
+            - name: Download and install kubectl (Linux)
+              get_url:
+                url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
+                dest: /usr/local/bin/kubectl
+                mode: '0755'
+              vars:
+                kubectl_version: "v1.27.4"  # Match the Kubernetes version used by K3s
+
+            - name: Verify kubectl installation
+              command: kubectl version --client
+              register: kubectl_version_output
+
+            - name: Display kubectl version
+              debug:
+                msg: "{{ kubectl_version_output.stdout }}"
+      delegate_to: localhost
+
+    - name: Configure kubectl to use the fetched kubeconfig
+      copy:
+        src: ./k3s.yaml
+        dest: ~/.kube/config
+        mode: '0600'
+      delegate_to: localhost
+
+    - name: Test kubectl connection to the cluster
+      command: kubectl get nodes
+      register: kubectl_test
+      delegate_to: localhost
+
+    - name: Display kubectl test result
+      debug:
+        msg: "{{ kubectl_test.stdout }}"
+      delegate_to: localhost
+
+
+# NO_PROXY=127.0.0.1,localhost,10.0.0.0/8,192.168.0.0/16,172.16.149.2
+# http_proxy=http://a.sabzaliyan:3yXABWlRbAxjVQqN@172.16.110.254:3128
+# https_proxy=http://a.sabzaliyan:3yXABWlRbAxjVQqN@172.16.110.254:3128
+# HTTP_PROXY=http://a.sabzaliyan:3yXABWlRbAxjVQqN@172.16.110.254:3128
+# HTTPS_PROXY=http://a.sabzaliyan:3yXABWlRbAxjVQqN@172.16.110.254:3128
+# CONTAINERD_HTTP_PROXY=http://a.sabzaliyan:3yXABWlRbAxjVQqN@172.16.110.254:3128
+# CONTAINERD_HTTPS_PROXY=http://a.sabzaliyan:3yXABWlRbAxjVQqN@172.16.110.254:3128
+# CONTAINERD_NO_PROXY=127.0.0.1,localhost,10.0.0.0/8,192.168.0.0/16,172.16.149.2
+# `sudo tcpdump -i any host 172.16.110.254 and port 3128` -> check if anything is going to the proxy

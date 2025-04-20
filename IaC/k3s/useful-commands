@@ -1,0 +1,6 @@
+alias k3-restart="sudo systemctl daemon-reload && sudo systemctl restart k3s"
+alias kb="kubectl"
+alias pods="kubectl get pods"
+alias all-pods="kubectl get pods --all-namespaces"
+alias main-pods="kubectl get pods -n control-plane"
+alias events="kubectl get events"

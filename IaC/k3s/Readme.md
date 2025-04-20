@@ -1,0 +1,1 @@
+Running server.yaml story creates the file k3s
