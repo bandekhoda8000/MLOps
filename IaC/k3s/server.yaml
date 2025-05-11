@@ -119,12 +119,14 @@
       delegate_to: localhost
 
 
-# NO_PROXY=127.0.0.1,localhost,10.0.0.0/8,192.168.0.0/16,172.16.149.2
-# http_proxy=http://a.sabzaliyan:3yXABWlRbAxjVQqN@172.16.110.254:3128
-# https_proxy=http://a.sabzaliyan:3yXABWlRbAxjVQqN@172.16.110.254:3128
-# HTTP_PROXY=http://a.sabzaliyan:3yXABWlRbAxjVQqN@172.16.110.254:3128
-# HTTPS_PROXY=http://a.sabzaliyan:3yXABWlRbAxjVQqN@172.16.110.254:3128
-# CONTAINERD_HTTP_PROXY=http://a.sabzaliyan:3yXABWlRbAxjVQqN@172.16.110.254:3128
-# CONTAINERD_HTTPS_PROXY=http://a.sabzaliyan:3yXABWlRbAxjVQqN@172.16.110.254:3128
-# CONTAINERD_NO_PROXY=127.0.0.1,localhost,10.0.0.0/8,192.168.0.0/16,172.16.149.2
+# FIXME: run this commands if installation was complete: mkdir -p ~/.kube
+# sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+# sudo chown $USER:$USER ~/.kube/config
+
+# add this to .bashrc: export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 # `sudo tcpdump -i any host 172.16.110.254 and port 3128` -> check if anything is going to the proxy
+Environment="HTTP_PROXY=185.110.189.47:8888"
+Environment="HTTPS_PROXY=185.110.189.47:8888"
+Environment="CONTAINERD_HTTP_PROXY=185.110.189.47:8888"
+Environment="CONTAINERD_HTTPS_PROXY=185.110.189.47:8888"
+Environment="https_proxy=185.110.189.47:8888"

@@ -17,6 +17,7 @@ helm upgrade --install <release name> <helm-charts-folder> --values values.yaml
 ## Grafana, Prometheus
 
 ```sh
+ helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
  helm install monitoring prometheus-community/kube-prometheus-stack -n monitoring 
 ```
 
@@ -38,6 +39,26 @@ Access Grafana local instance:
 
 ```
 
+```yml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: monitoring-ingress
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /grafana
+        pathType: Prefix
+        backend:
+          service:
+            name: grafana
+            port:
+              number: 80
+
+```
 Visit https://github.com/prometheus-operator/kube-prometheus for instructions on how to create & configure Alertmanager and Prometheus instances using the Operator.
 
 * After this go to `Menu > Dashboards > +New > add the dashboard with id: 315` with `Prometheus` as data source. 

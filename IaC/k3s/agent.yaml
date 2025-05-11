@@ -1,0 +1,66 @@
+---
+- name: Install K3s Agent Node with Pre-Installation Setup
+  hosts: workers
+  become: yes
+  vars:
+    k3s_version: "v1.27.4+k3s1"  # Specify the desired K3s version (optional)
+    k3s_install_script_url: "https://get.k3s.io"
+    k3s_server_ip: "172.16.149.128"  # Replace with your K3s server IP or hostname
+    k3s_token: "K100137f5c86ad5d102537b3b9c4922861d90cbdf892d942589b7addb44f9b7a12c::server:9743b4b17972047fa7db2ae9f1a1b814" 
+
+  tasks:
+    - name: Ensure iptables-persistent is installed
+      apt:
+        name: iptables-persistent
+        state: present
+        update_cache: yes
+
+    - name: Enable netfilter-persistent service
+      systemd:
+        name: netfilter-persistent
+        enabled: yes
+        state: started
+
+    - name: Add iptables rules for K3s
+      shell: |
+        iptables -I INPUT -p tcp --dport 6443 -j ACCEPT
+        iptables -I INPUT -p udp --dport 8472 -j ACCEPT
+        iptables -I INPUT -p tcp --dport 10250 -j ACCEPT
+      args:
+        executable: /bin/bash
+
+    - name: Save iptables rules persistently
+      shell: netfilter-persistent save
+
+    - name: Ensure curl is installed
+      apt:
+        name: curl
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Download and install K3s in agent mode
+      shell: |
+        curl -sfL {{ k3s_install_script_url }} | \
+        INSTALL_K3S_VERSION={{ k3s_version }} \
+        K3S_URL=https://{{ k3s_server_ip }}:6443 \
+        K3S_TOKEN={{ k3s_token }} \
+        sh -
+      args:
+        creates: /usr/local/bin/k3s
+
+    - name: Ensure K3s agent service is running
+      systemd:
+        name: k3s-agent
+        state: started
+        enabled: yes
+
+    - name: Verify K3s agent node is ready
+      shell: k3s kubectl get nodes | grep "{{ inventory_hostname }}"
+      register: node_status
+      failed_when: "'Ready' not in node_status.stdout"
+      changed_when: false
+      delegate_to: "{{ groups['master'][0] }}"  # Run this task on the master node
+
+    - name: Debug node status
+      debug:
+        msg: "Node {{ inventory_hostname }} is ready!"

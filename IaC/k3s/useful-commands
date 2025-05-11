@@ -4,3 +4,7 @@ alias pods="kubectl get pods"
 alias all-pods="kubectl get pods --all-namespaces"
 alias main-pods="kubectl get pods -n control-plane"
 alias events="kubectl get events"
+alias brc="nano ~/.bashrc"
+alias deamon-reload="sudo systemctl daemon-reload"
+alias sys="sudo systemctl"
+

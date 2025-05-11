@@ -1,0 +1,77 @@
+---
+- name: Configure K3s Environment Variables for Master and Workers
+  hosts: all
+  become: yes
+
+  vars:
+    k3s_env_vars:
+      NO_PROXY: "{{ lookup('env', 'NO_PROXY') }}"
+      http_proxy: "{{ lookup('env', 'HTTP_PROXY') }}"
+      https_proxy: "{{ lookup('env', 'HTTPS_PROXY') }}"
+      HTTP_PROXY: "{{ lookup('env', 'HTTP_PROXY') }}"
+      HTTPS_PROXY: "{{ lookup('env', 'HTTPS_PROXY') }}"
+      CONTAINERD_HTTP_PROXY: "{{ lookup('env', 'CONTAINERD_HTTP_PROXY') }}"
+      CONTAINERD_HTTPS_PROXY: "{{ lookup('env', 'CONTAINERD_HTTPS_PROXY') }}"
+      CONTAINERD_NO_PROXY: "{{ lookup('env', 'CONTAINERD_NO_PROXY') }}"
+
+  tasks:
+    - name: Ensure the override directory exists for master nodes
+      file:
+        path: /etc/systemd/system/k3s.service.d/
+        state: directory
+        mode: '0755'
+      when: "'master' in group_names"
+
+    - name: Ensure the override directory exists for worker nodes
+      file:
+        path: /etc/systemd/system/k3s-agent.service.d/
+        state: directory
+        mode: '0755'
+      when: "'workers' in group_names"
+
+    - name: Add or update environment variables in override.conf for master nodes
+      lineinfile:
+        path: /etc/systemd/system/k3s.service.d/override.conf
+        regexp: "^Environment=\"{{ item.key }}="
+        line: "Environment=\"{{ item.key }}={{ item.value }}\""
+        create: yes
+      loop: "{{ k3s_env_vars | dict2items }}"
+      when: "'master' in group_names"
+      notify:
+        - Reload systemd daemon on master
+        - Restart K3s service on master
+
+    - name: Add or update environment variables in override.conf for worker nodes
+      lineinfile:
+        path: /etc/systemd/system/k3s-agent.service.d/override.conf
+        regexp: "^Environment=\"{{ item.key }}="
+        line: "Environment=\"{{ item.key }}={{ item.value }}\""
+        create: yes
+      loop: "{{ k3s_env_vars | dict2items }}"
+      when: "'workers' in group_names"
+      notify:
+        - Reload systemd daemon on workers
+        - Restart K3s-agent service on workers
+
+  handlers:
+    - name: Reload systemd daemon on master
+      systemd:
+        daemon_reload: yes
+      when: "'master' in group_names"
+
+    - name: Restart K3s service on master
+      systemd:
+        name: k3s
+        state: restarted
+      when: "'master' in group_names"
+
+    - name: Reload systemd daemon on workers
+      systemd:
+        daemon_reload: yes
+      when: "'workers' in group_names"
+
+    - name: Restart K3s-agent service on workers
+      systemd:
+        name: k3s-agent
+        state: restarted
+      when: "'workers' in group_names"
